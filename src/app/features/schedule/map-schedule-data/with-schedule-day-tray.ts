@@ -3,7 +3,6 @@ import { TaskRepeatCfg } from '../../task-repeat-cfg/task-repeat-cfg.model';
 import { ScheduleDay, ScheduleDayTray } from '../schedule.model';
 import { getTimeLeftForTask } from '../../../util/get-time-left-for-task';
 import { getTaskRepeatCfgsForExactDayCached } from '../../task-repeat-cfg/store/get-task-repeat-cfgs-for-exact-day-cached.util';
-import { getTasksWithinAndBeyondBudget } from './get-tasks-within-and-beyond-budget';
 import { dateStrToUtcDate } from '../../../util/date-str-to-utc-date';
 
 export interface ScheduleTrayCfg {
@@ -41,14 +40,14 @@ export const withScheduleDayTray = (
     tasks.reduce((acc, task) => acc + getTimeLeftForTask(task), 0) +
     repeatCfgs.reduce((acc, cfg) => acc + (cfg.defaultEstimate || 0), 0);
 
-  if (!params.isCapacityLimited) {
-    return { ...day, tray: { tasks, repeatCfgs, plannedMs } };
-  }
+  // The tray line is the only overload signal in tray mode: beyondBudgetTasks
+  // stays empty, so the header's "N tasks don't fit" badge, which counts
+  // tasks rather than time, cannot contradict it.
   return {
     ...day,
-    // feeds the existing "does not fit" badge in the day header
-    beyondBudgetTasks: getTasksWithinAndBeyondBudget(tasks, params.budgetMs).beyond,
-    tray: { tasks, repeatCfgs, plannedMs, freeMs: params.budgetMs - plannedMs },
+    tray: params.isCapacityLimited
+      ? { tasks, repeatCfgs, plannedMs, freeMs: params.budgetMs - plannedMs }
+      : { tasks, repeatCfgs, plannedMs },
   };
 };
 
